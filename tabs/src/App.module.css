@@ -1,0 +1,17 @@
+.constainer {
+  width: 100%;
+  min-height: 200px;
+  border: 1px solid black;
+}
+
+.btn{
+  padding: 10px;
+  background-color: brown;
+  text-align: center;
+  overflow: hidden;
+}
+
+.active{
+  composes: btn;
+  background-color: blue;
+}
