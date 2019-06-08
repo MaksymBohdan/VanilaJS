@@ -4,7 +4,7 @@ import s from './App.module.css'
 class App extends Component {
   state = {
     tabs: [
-      { id: 0, title: "Tab1", content: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Molestiae, explicabo.' },
+      { id: 0, title: "Tab1", content: 'Lorembb ipsum dolor sit amet consectetur adipisicing elit. Molestiae, explicabo.' },
       { id: 1, title: "Tab2", content: 'Lorem ipsum dolor sit amet.' },
       { id: 2, title: "Tab3", content: 'Lorem ipsum dolor sit amet consectetur adipisicing.' }],
     activeTabIndex: 0,
