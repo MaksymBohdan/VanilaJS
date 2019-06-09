@@ -11,3 +11,5 @@ tabs.forEach(clickedTab => {
     document.body.style.background = clickedTabBGColor;
   });
 });
+
+

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+
+<body>
+  <section>
+    <h1>Users</h1>
+    <div class="users-container" style="display:flex; flex-wrap: wrap; ">
+    </div>
+    <h1>Posts of user #1</h1>
+    <div class="posts-container">
+    </div>
+  </section>
+  <script>
+    // дальше задача такая
+    // https://jsonplaceholder.typicode.com/
+    // сначала загружаешь пользователей `/users`
+    // потом загружаешь посты этого пользователя`/posts?userId${userId}`, `userId` - возьмешь из респонса `/users`
+    // и потом к каждому посту загружаешь комменты
+    // и это все дело нужно показать на странице, как ты это покажешь - твое дело, 
+    // главное что-бы было понятно где пользовали, где посты и где комменты
+    const fetchUserInfo = (url) => {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.open('GET', url, true);
+        xhr.onload = function () {
+          if (this.status === 200) {
+            resolve(this.response)
+          } else {
+            reject(new Error('Rejected'))
+          }
+        }
+        xhr.send()
+      })
+    }
+
+    const getJSON = (response) => JSON.parse(response);
+
+    fetchUserInfo('https://jsonplaceholder.typicode.com/users')
+      .then(usersResponse => {
+        const users = getJSON(usersResponse)
+        console.log("users", users);
+        const usersContainer = document.querySelector('.users-container');
+
+        users.map(user => {
+          const userToDispay = `
+            <div style="border:1px solid black; margin: 5px; padding:5px; width:300px;">
+              <p><b>ID</b>: ${user.id}</p>
+              <div><b>NAME</b>: ${user.name} ${user.username}</div>
+            </div>`
+
+          usersContainer.innerHTML += userToDispay;
+        })
+        const id = users[0].id; // getting id of first user
+
+        return fetchUserInfo(`https://jsonplaceholder.typicode.com/posts?userId=${id}`)
+      })
+      .then(postsResponse => {
+        const posts = getJSON(postsResponse);
+        console.log('posts', posts);
+        const postsContainer = document.querySelector('.posts-container');
+
+        posts.forEach(post => {
+          const postToDisplay = `
+            <div style = "border:1px solid black; margin: 5px; padding:5px;"> 
+              <p><b>POST ID</b>: ${post.id}</p>
+              <p><b>TITLE</b>: ${post.title}</p>
+              <p><b>CONTENT</b>: ${post.body}</p>
+              <h2>Comments</h2>
+              <ul class="comments${post.id}"></ul>
+            </div>`;
+
+          postsContainer.innerHTML += postToDisplay
+
+          // fetching comments for each post
+          fetchUserInfo(`https://jsonplaceholder.typicode.com/posts/1/comments?postId=${post.id}`)
+            .then(commentsResponse => {
+              const comments = getJSON(commentsResponse)
+              const commentsDiv = document.querySelector(`.comments${post.id}`);
+              const html = [];
+
+              comments.forEach(el => {
+                html.push(`<li style="font-style: italic;"> ${el.body}</li>`)
+              })
+
+              //removing ',' between <li> tags
+              const commentToDisplay = html.join('');
+
+              commentsDiv.innerHTML += commentToDisplay;
+            })
+        })
+      })
+      .catch(err => console.log(err))
+
+  </script>
+</body>
+
+</html>

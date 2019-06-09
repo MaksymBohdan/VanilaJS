@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+
+<body>
+  <script>
+    const body = document.querySelector('body');
+    const section = document.createElement('section');
+    body.prepend(section)
+
+
+    const userTitle = document.createElement('h1');
+    const postsTitle = document.createElement('h1');
+    userTitle.textContent = 'LIST OF USERS'
+    postsTitle.textContent = 'POSTS OF USER #1'
+
+
+    section.append(userTitle);
+    section.append(postsTitle);
+
+
+    const userContainer = document.createElement('div');
+    userContainer.classList.add('users-container')
+    userContainer.setAttribute("style", "display:flex; flex-wrap: wrap;");
+    const postContainer = document.createElement('div');
+    postContainer.classList.add('posts-container')
+
+
+    userTitle.after(userContainer);
+    postsTitle.after(postContainer);
+
+
+    const fetchUserInfo = (url) => {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.open('GET', url, true);
+        xhr.onload = function () {
+          if (this.status === 200) {
+            resolve(this.response)
+          } else {
+            reject(new Error('Rejected'))
+          }
+        }
+        xhr.send()
+      })
+    }
+
+    const getJSON = (response) => JSON.parse(response);
+
+    const getPostsInRecursion = (postNumber, id) => {
+      if (postNumber > 10) return;
+      console.log(`recursion step : ${postNumber}`);
+      fetchUserInfo(`https://jsonplaceholder.typicode.com/posts/${postNumber}?userId=${id}`)
+        .then(postResponse => {
+          const post = getJSON(postResponse)
+         
+          const postToDisplay = `
+            <div style = "border:1px solid black; margin: 5px; padding:5px;"> 
+              <p><b>POST ID</b>: ${post.id}</p>
+              <p><b>TITLE</b>: ${post.title}</p>
+              <p><b>CONTENT</b>: ${post.body}</p>
+              <h2>Comments</h2>
+              <ul class="comments${post.id}"></ul>
+            </div>`;
+
+          postContainer.innerHTML += postToDisplay
+          return post;
+        })
+        .then(post => {
+          fetchUserInfo(`https://jsonplaceholder.typicode.com/posts/1/comments?postId=${post.id}`)
+            .then(commentsResponse => {
+              const comments = getJSON(commentsResponse)
+              const commentsDiv = document.querySelector(`.comments${post.id}`);
+              const html = [];
+
+              comments.forEach(el => {
+                html.push(`<li style="font-style: italic;"> ${el.body}</li>`)
+              })
+              const commentToDisplay = html.join('');
+              commentsDiv.innerHTML += commentToDisplay;
+              
+              getPostsInRecursion(postNumber + 1, id)
+            })
+        })
+    }
+
+
+    fetchUserInfo('https://jsonplaceholder.typicode.com/users')
+      .then(usersResponse => {
+        const users = getJSON(usersResponse)
+
+        users.forEach(user => {
+          const userToDispay = `
+            <div style="border:1px solid black; margin: 5px; padding:5px; width:300px;">
+              <p><b>ID</b>: ${user.id}</p>
+              <div><b>NAME</b>: ${user.name} ${user.username}</div>
+            </div>`
+
+          userContainer.innerHTML += userToDispay;
+        })
+
+        const id = users[0].id; 
+
+        getPostsInRecursion(1, id);
+      })
+      .catch(err => console.log(err))
+
+  </script>
+</body>
+
+</html>

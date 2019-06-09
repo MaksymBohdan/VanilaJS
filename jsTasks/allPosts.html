@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+
+<body>
+  <script>
+    const body = document.querySelector('body');
+    const section = document.createElement('section');
+    body.prepend(section)
+
+    const usersTitle = document.createElement('h1');
+    usersTitle.textContent = 'LIST OF USERS'
+
+    section.append(usersTitle);
+
+    const usersContainer = document.createElement('div');
+    usersContainer.classList.add('users-container')
+    usersContainer.setAttribute('style', 'display:flex; flex-wrap: wrap;');
+
+    usersTitle.after(usersContainer);
+
+    const fetchUserInfo = (url) => {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            resolve(JSON.parse(xhr.response))
+          }
+          else {
+            reject(new Error('Rejected'));
+          }
+        }
+        xhr.send()
+      })
+    }
+
+
+    // getJSON я хотел что-бы делал запрос и возвращал не строку а уже распарсенный объект
+    // подход с рекурсией ОК только давай сделаем метод
+    // ```makeSerialRequest([urls]){// на входе массив url
+    //   return new Promise(() => {
+    //     //resolve когда все запросы выполняться последовательно
+    //   });
+    // }```
+    // загрузи последовательно комменты к каждому посту)
+    // но давай начинать грузить комменты только после того загрузятся все посты
+    // можешь тут воспользоваться `Promise.all`
+    fetchUserInfo('https://jsonplaceholder.typicode.com/users')
+      .then(users => {
+        users.forEach(user => {
+          const usersToDisplay = `
+            <div style="border:1px solid black; margin: 5px; padding:5px; width:300px;">
+              <p><b>ID</b>: ${user.id}</p>
+              <div><b>NAME</b>: ${user.name} ${user.username}</div>
+            </div>`
+
+          usersContainer.innerHTML += usersToDisplay;
+        })
+        const userPostUrl = [];
+
+        for (i = 0; i < users.length; i++) {
+          userPostUrl.push(`https://jsonplaceholder.typicode.com/posts?userId=${i + 1}`);
+        }
+
+
+        Promise.all(userPostUrl.map(fetchUserInfo))
+          .then(allUsersPosts => {
+            allUsersPosts.forEach((userPosts, idx) => {
+              const postsTitle = document.createElement('h1');
+              postsTitle.textContent = `POSTS OF USER #${idx + 1}`
+              section.append(postsTitle);
+              const postsContainer = document.createElement('div');
+              postsContainer.classList.add(`posts-container${idx + 1}`)
+              postsTitle.after(postsContainer);
+
+              userPosts.forEach(post => {
+                const postToDisplay = `
+                  <div style = "border:1px solid black; margin: 5px; padding:5px;"> 
+                    <p><b>POST ID</b>: ${post.id}</p>
+                    <p><b>TITLE</b>: ${post.title}</p>
+                    <p><b>CONTENT</b>: ${post.body}</p>
+                    <h2>Comments</h2>
+                    <ul class="comments${post.id}"></ul>
+                  </div>`;
+
+                const currentContainer = document.querySelector(`.posts-container${post.userId}`)
+                currentContainer.innerHTML += postToDisplay;
+              })
+            })
+          })
+      }).then(
+        fetchUserInfo('https://jsonplaceholder.typicode.com/posts').then(res => {
+          const postsQuantity = res.length;
+          makeSerialRequest(postsQuantity)
+        })
+
+      )
+
+    const makeSerialRequest = (postsQuantity, postStart = 1) => {
+      let currentPost = postStart;
+      if (currentPost === postsQuantity) return;
+
+      fetchUserInfo(`https://jsonplaceholder.typicode.com/comments?postId=${currentPost}`).then(comments => {
+        const commentsDiv = document.querySelector(`.comments${currentPost}`);
+        const html = [];
+
+        comments.forEach(el => html.push(`<li style="font-style: italic;"> ${el.body}</li>`))
+
+        const commentToDisplay = html.join('');
+        commentsDiv.innerHTML += commentToDisplay;
+
+        currentPost = currentPost + 1;
+        makeSerialRequest(postsQuantity, currentPost)
+      })
+    }
+
+  </script>
+</body>
+
+</html>
