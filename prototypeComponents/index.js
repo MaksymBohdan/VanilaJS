@@ -71,7 +71,7 @@ Component.prototype = {
     });
   },
 
-  selectorGenerator: function(options) {
+  selectorCreator: function(options) {
     const { events } = options;
 
     for (const key in events) {
@@ -87,9 +87,9 @@ Component.prototype = {
   },
 
   attachEventHandlers: function() {
-    const { eventType, selectorFromKey, method } = this.selectorGenerator(this.options);
+    const { eventType, selectorFromKey, method } = this.selectorCreator(this.options);
 
-    document.querySelector(selectorFromKey).addEventListener(eventType, method);
+    document.querySelector(selectorFromKey).addEventListener(eventType, this[method]);
   },
 
   render: function(data) {
@@ -97,8 +97,10 @@ Component.prototype = {
   },
 
   renderTo: function(container) {
+    if (this.container) container.innerHTML = '';
+
     this.container = container;
-    container.innerHTML += this.renderData;
+    this.container.innerHTML += this.renderData;
   },
 
   destroy: function() {
@@ -108,96 +110,102 @@ Component.prototype = {
 
     if (!this.options) return;
 
-    const { eventType, selectorFromKey, method } = selectorGenerator(this.options);
+    const { eventType, selectorFromKey, method } = this.selectorCreator(this.options);
 
-    document.querySelector(selectorFromKey).removeEventListener(eventType, method);
+    document.querySelector(selectorFromKey).removeEventListener(eventType, this[method]);
   }
 };
 
 //============UserComponent
-
 const UserComponent = function(options) {
-  Component.call(this, options, renderData, container);
+  Component.call(this, options);
+  this.renderData = null;
+  this.container = null;
 };
 
 UserComponent.prototype = Object.create(Component.prototype);
 UserComponent.prototype.constructor = UserComponent;
 
-// const UserComponent = function(options) {
+const userComponent = new UserComponent(null);
+
+userComponent.fetchData('https://jsonplaceholder.typicode.com/users').then(response => {
+  const usersToRender = response.map(userTemplate).join('');
+  userComponent.render(usersToRender);
+  userComponent.renderTo(userContainer);
+});
+
+//============PostsComponent
+const PostsComponent = function(options) {
+  Component.call(this, options);
+  this.renderData = null;
+  this.container = null;
+};
+
+PostsComponent.prototype = Object.create(Component.prototype);
+PostsComponent.prototype.constructor = PostsComponent;
+PostsComponent.prototype.getPosts = function(event) {
+  if (event.target.nodeName !== 'BUTTON') return;
+
+  PostsComponent.prototype.fetchData(`https://jsonplaceholder.typicode.com/posts?userId=${event.target.id}`).then(response => {
+    const postsToRender = response.map(postTemplate).join('');
+
+    PostsComponent.prototype.render(postsToRender);
+    PostsComponent.prototype.renderTo(postContainer);
+  });
+};
+
+// const optionsForPosts = {
+//   events: {
+//     'div.users-container click': 'getPosts'
+//   }
+// };
+
+// const postsComponent = new PostsComponent(optionsForPosts);
+
+// postsComponent.attachEventHandlers();
+
+// ============CommentComponent
+// const CommentsComponent = function(options) {
 //   Component.call(this, options);
 //   this.renderData = null;
 //   this.container = null;
 // };
-// UserComponent.prototype = Object.create(Component.prototype);
-// UserComponent.prototype.constructor = UserComponent;
 
-console.log(UserComponent.fetchData);
+// CommentsComponent.prototype = Object.create(Component.prototype);
+// CommentsComponent.prototype.constructor = CommentsComponent;
+// CommentsComponent.prototype.getComments = function(event) {
+//   if (event.target.nodeName !== 'BUTTON') return;
 
-UserComponent.fetchData('https://jsonplaceholder.typicode.com/users').then(response => {
-  const usersToRender = response.map(userTemplate).join('');
-  UserComponent.render(usersToRender);
-  UserComponent.renderTo(userContainer);
-});
+//   CommentsComponent.prototype
+//     .fetchData(`https://jsonplaceholder.typicode.com/comments?postId=${event.target.id}`)
+//     .then(response => {
+//       const commentContainer = document.querySelector(`.comment${response[0].postId}`);
+//       const commentsToRender = response.map(commentTemplate).join('');
 
-//============PostsComponent
-const optionsForPosts = {
-  events: {
-    'div.users-container click': getPosts
-  }
-};
+//       CommentsComponent.prototype.render(commentsToRender);
+//       CommentsComponent.prototype.renderTo(commentContainer);
+//     });
+// };
 
-// const PostsComponent = function
-const PostsComponent = new Component(optionsForPosts);
-
-PostsComponent.attachEventHandlers();
-
-function getPosts(event) {
-  if (event.target.nodeName !== 'BUTTON') return;
-
-  PostsComponent.fetchData(`https://jsonplaceholder.typicode.com/posts?userId=${event.target.id}`).then(response => {
-    const postsToRender = response.map(postTemplate).join('');
-
-    if (PostsComponent.renderData) postContainer.innerHTML = '';
-
-    PostsComponent.render(postsToRender);
-    PostsComponent.renderTo(postContainer);
-  });
-}
-
-// ============CommentComponent
 // const optionsForComments = {
 //   events: {
-//     'div.posts-container click': getComments
+//     'div.posts-container click': 'getComments'
 //   }
 // };
 
-// const CommentsComponent = new Component(optionsForComments);
+// const commentsComponent = new CommentsComponent(optionsForComments);
 
-// CommentsComponent.attachEventHandlers();
-
-// function getComments(event) {
-//   if (event.target.nodeName !== 'BUTTON') return;
-
-//   fetchData(`https://jsonplaceholder.typicode.com/comments?postId=${event.target.id}`).then(response => {
-//     const commentContainer = document.querySelector(`.comment${response[0].postId}`);
-//     const commentsToRender = response.map(commentTemplate).join('');
-
-//     if (CommentsComponent.renderData) commentContainer.innerHTML = '';
-
-//     CommentsComponent.render(commentsToRender);
-//     CommentsComponent.renderTo(commentContainer);
-//   });
-// }
+// commentsComponent.attachEventHandlers();
 
 // ============Destroy
-// setTimeout(() => {
-//   CommentsComponent.destroy();
+// setTimeout(() => {getComments
+//   commentsComponent.destroy();
 // }, 6000);
 
 // setTimeout(() => {
-//   PostsComponent.destroy();
+//   postsComponent.destroy();
 // }, 7000);
 
 // setTimeout(() => {
-//   UserComponent.destroy();
+//   userComponent.destroy();
 // }, 8000);
