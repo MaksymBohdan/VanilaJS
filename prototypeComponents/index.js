@@ -89,7 +89,7 @@ Component.prototype = {
   attachEventHandlers: function() {
     const { eventType, selectorFromKey, method } = this.selectorCreator(this.options);
 
-    document.querySelector(selectorFromKey).addEventListener(eventType, this[method]);
+    document.querySelector(selectorFromKey).addEventListener(eventType, this[method].bind(this));
   },
 
   render: function(data) {
@@ -112,7 +112,7 @@ Component.prototype = {
 
     const { eventType, selectorFromKey, method } = this.selectorCreator(this.options);
 
-    document.querySelector(selectorFromKey).removeEventListener(eventType, this[method]);
+    document.querySelector(selectorFromKey).removeEventListener(eventType, this[method].bind(this));
   }
 };
 
@@ -130,6 +130,7 @@ const userComponent = new UserComponent(null);
 
 userComponent.fetchData('https://jsonplaceholder.typicode.com/users').then(response => {
   const usersToRender = response.map(userTemplate).join('');
+
   userComponent.render(usersToRender);
   userComponent.renderTo(userContainer);
 });
@@ -146,59 +147,59 @@ PostsComponent.prototype.constructor = PostsComponent;
 PostsComponent.prototype.getPosts = function(event) {
   if (event.target.nodeName !== 'BUTTON') return;
 
-  PostsComponent.prototype.fetchData(`https://jsonplaceholder.typicode.com/posts?userId=${event.target.id}`).then(response => {
+  this.fetchData(`https://jsonplaceholder.typicode.com/posts?userId=${event.target.id}`).then(response => {
     const postsToRender = response.map(postTemplate).join('');
 
-    PostsComponent.prototype.render(postsToRender);
-    PostsComponent.prototype.renderTo(postContainer);
+    this.render(postsToRender);
+    this.renderTo(postContainer);
   });
 };
 
-// const optionsForPosts = {
-//   events: {
-//     'div.users-container click': 'getPosts'
-//   }
-// };
+const optionsForPosts = {
+  events: {
+    'div.users-container click': 'getPosts'
+  }
+};
 
-// const postsComponent = new PostsComponent(optionsForPosts);
+const postsComponent = new PostsComponent(optionsForPosts);
 
-// postsComponent.attachEventHandlers();
+postsComponent.attachEventHandlers();
 
 // ============CommentComponent
-// const CommentsComponent = function(options) {
-//   Component.call(this, options);
-//   this.renderData = null;
-//   this.container = null;
-// };
+const CommentsComponent = function(options) {
+  Component.call(this, options);
+  this.renderData = null;
+  this.container = null;
+};
 
-// CommentsComponent.prototype = Object.create(Component.prototype);
-// CommentsComponent.prototype.constructor = CommentsComponent;
-// CommentsComponent.prototype.getComments = function(event) {
-//   if (event.target.nodeName !== 'BUTTON') return;
+CommentsComponent.prototype = Object.create(Component.prototype);
+CommentsComponent.prototype.constructor = CommentsComponent;
+CommentsComponent.prototype.getComments = function(event) {
+  if (event.target.nodeName !== 'BUTTON') return;
 
-//   CommentsComponent.prototype
-//     .fetchData(`https://jsonplaceholder.typicode.com/comments?postId=${event.target.id}`)
-//     .then(response => {
-//       const commentContainer = document.querySelector(`.comment${response[0].postId}`);
-//       const commentsToRender = response.map(commentTemplate).join('');
+  commentsComponent
+    .fetchData(`https://jsonplaceholder.typicode.com/comments?postId=${event.target.id}`)
+    .then(response => {
+      const commentContainer = document.querySelector(`.comment${response[0].postId}`);
+      const commentsToRender = response.map(commentTemplate).join('');
 
-//       CommentsComponent.prototype.render(commentsToRender);
-//       CommentsComponent.prototype.renderTo(commentContainer);
-//     });
-// };
+      this.render(commentsToRender);
+      this.renderTo(commentContainer);
+    });
+};
 
-// const optionsForComments = {
-//   events: {
-//     'div.posts-container click': 'getComments'
-//   }
-// };
+const optionsForComments = {
+  events: {
+    'div.posts-container click': 'getComments'
+  }
+};
 
-// const commentsComponent = new CommentsComponent(optionsForComments);
+const commentsComponent = new CommentsComponent(optionsForComments);
 
-// commentsComponent.attachEventHandlers();
+commentsComponent.attachEventHandlers();
 
 // ============Destroy
-// setTimeout(() => {getComments
+// setTimeout(() => {
 //   commentsComponent.destroy();
 // }, 6000);
 
