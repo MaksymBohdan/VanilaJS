@@ -51,7 +51,6 @@ const commentTemplate = function(comment) {
 
 function Component(options) {
   this.options = options;
-  this.renderData = null;
   this.container = null;
 }
 
@@ -92,21 +91,16 @@ Component.prototype = {
     document.querySelector(selectorFromKey).addEventListener(eventType, this[method].bind(this));
   },
 
-  render: function(data) {
-    this.renderData = data;
-  },
+  render: function(data, toContainer) {
+    if (this.container) toContainer.innerHTML = '';
 
-  renderTo: function(container) {
-    if (this.container) container.innerHTML = '';
-
-    this.container = container;
-    this.container.innerHTML += this.renderData;
+    this.container = toContainer;
+    toContainer.innerHTML += data;
   },
 
   destroy: function() {
     this.container.remove();
     this.container = null;
-    this.renderData = null;
 
     if (!this.options) return;
 
@@ -119,7 +113,6 @@ Component.prototype = {
 //============UserComponent
 const UserComponent = function(options) {
   Component.call(this, options);
-  this.renderData = null;
   this.container = null;
 };
 
@@ -131,14 +124,12 @@ const userComponent = new UserComponent(null);
 userComponent.fetchData('https://jsonplaceholder.typicode.com/users').then(response => {
   const usersToRender = response.map(userTemplate).join('');
 
-  userComponent.render(usersToRender);
-  userComponent.renderTo(userContainer);
+  userComponent.render(usersToRender, userContainer);
 });
 
 //============PostsComponent
 const PostsComponent = function(options) {
   Component.call(this, options);
-  this.renderData = null;
   this.container = null;
 };
 
@@ -150,8 +141,7 @@ PostsComponent.prototype.getPosts = function(event) {
   this.fetchData(`https://jsonplaceholder.typicode.com/posts?userId=${event.target.id}`).then(response => {
     const postsToRender = response.map(postTemplate).join('');
 
-    this.render(postsToRender);
-    this.renderTo(postContainer);
+    this.render(postsToRender, postContainer);
   });
 };
 
@@ -168,7 +158,6 @@ postsComponent.attachEventHandlers();
 // ============CommentComponent
 const CommentsComponent = function(options) {
   Component.call(this, options);
-  this.renderData = null;
   this.container = null;
 };
 
@@ -183,8 +172,7 @@ CommentsComponent.prototype.getComments = function(event) {
       const commentContainer = document.querySelector(`.comment${response[0].postId}`);
       const commentsToRender = response.map(commentTemplate).join('');
 
-      this.render(commentsToRender);
-      this.renderTo(commentContainer);
+      this.render(commentsToRender, commentContainer);
     });
 };
 
@@ -199,14 +187,14 @@ const commentsComponent = new CommentsComponent(optionsForComments);
 commentsComponent.attachEventHandlers();
 
 // ============Destroy
-// setTimeout(() => {
-//   commentsComponent.destroy();
-// }, 6000);
+setTimeout(() => {
+  commentsComponent.destroy();
+}, 6000);
 
-// setTimeout(() => {
-//   postsComponent.destroy();
-// }, 7000);
+setTimeout(() => {
+  postsComponent.destroy();
+}, 7000);
 
-// setTimeout(() => {
-//   userComponent.destroy();
-// }, 8000);
+setTimeout(() => {
+  userComponent.destroy();
+}, 8000);
