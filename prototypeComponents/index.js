@@ -1,12 +1,3 @@
-// надо разработать небольшую библиотечку для создания компонентов,
-// и автоматизировать слушание ивентов внутри компонента
-// возьми задание с промисов, там где мы загружали пользователей с постами
-// и переделай его используя свой компонент
-// тебе надо будет создать 3 компонента
-// `UserComponent`, `CommentComponent`, `PostComponent`
-// только после загрузки юзеров остальное не надо загружать,
-// сделать для каждого пользователя ссылку, по клику на которой будут грузиться посты
-
 const body = document.querySelector('body');
 const section = document.createElement('section');
 const userTitle = document.createElement('h1');
@@ -29,7 +20,7 @@ const userTemplate = function(user) {
   return `<div class=user-template" style="border:1px solid black; margin: 5px; padding:5px; width:300px; background-color: grey;">
   <p><b>ID</b>: ${user.id}</p>
   <div><b>NAME</b>: ${user.name} ${user.username}</div>
-  <button id="${user.id}">Load Post</button>
+  <button data-id="${user.id}">Load Post</button>
 </div>`;
 };
 
@@ -39,8 +30,7 @@ const postTemplate = function(post) {
   <p><b>TITLE</b>: ${post.title}</p>
   <p><b>CONTENT</b>: ${post.body}</p>
   <h2>Comments</h2>
-  <ul class="comments${post.id}"></ul>
-  <button id="${post.id}">Load Commnets</button>
+  <button data-id="${post.id}">Load Commnets</button>
   <ul class="comment${post.id}"></ul>
 </div>`;
 };
@@ -49,20 +39,40 @@ const commentTemplate = function(comment) {
   return `<li style="font-style: italic;"> ${comment.body}</li>`;
 };
 
-function Component(options) {
+const errorTemplate = function(err) {
+  return `<h1>${err.body}</h1>`;
+};
+
+const usersUrl = 'https://jsonplaceholder.typicode.com/users';
+const urlComments = 'https://jsonplaceholder.typicode.com/comments?postId=';
+const urlPosts = 'https://jsonplaceholder.typicode.com/posts?userId=';
+
+function Component(options, url, container, template) {
   this.options = options;
-  this.container = null;
+  this.url = url;
+  this.container = container;
+  this.template = template;
+  this.dataToRender = [];
 }
 
 Component.prototype = {
-  fetchData: function(url) {
+  fetchData: function() {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open('GET', url, true);
+
+      xhr.open('GET', this.url, true);
       xhr.onload = () => {
         if (xhr.status === 200) {
-          resolve(JSON.parse(xhr.response));
+          this.dataToRender = JSON.parse(xhr.response);
+          this.preventDublicates(this.container);
+          this.renderTo(this.container);
+
+          resolve();
         } else {
+          this.dataToRender = [{ body: 'Sorry! Please, try again' }];
+          this.template = errorTemplate;
+          this.renderTo(this.container);
+
           reject(new Error('Rejected'));
         }
       };
@@ -72,6 +82,7 @@ Component.prototype = {
 
   selectorCreator: function(options) {
     const { events } = options;
+    const selectorsArr = [];
 
     for (const key in events) {
       const eventType = key.split(' ').reverse()[0];
@@ -81,21 +92,29 @@ Component.prototype = {
         .toString();
       const method = events[key];
 
-      return { eventType, selectorFromKey, method };
+      selectorsArr.push({ eventType, selectorFromKey, method });
     }
+    return selectorsArr;
   },
 
   attachEventHandlers: function() {
-    const { eventType, selectorFromKey, method } = this.selectorCreator(this.options);
+    const selectors = this.selectorCreator(this.options);
 
-    document.querySelector(selectorFromKey).addEventListener(eventType, this[method].bind(this));
+    selectors.map(selector => {
+      const { eventType, selectorFromKey, method } = selector;
+
+      return document.querySelector(selectorFromKey).addEventListener(eventType, this[method].bind(this));
+    });
   },
 
-  render: function(data, toContainer) {
-    if (this.container) toContainer.innerHTML = '';
+  render: function(data) {
+    return data.map(this.template).join('');
+  },
 
-    this.container = toContainer;
-    toContainer.innerHTML += data;
+  renderTo: function(container) {
+    const convertedData = document.createRange().createContextualFragment(this.render(this.dataToRender));
+
+    container.append(convertedData);
   },
 
   destroy: function() {
@@ -104,45 +123,48 @@ Component.prototype = {
 
     if (!this.options) return;
 
-    const { eventType, selectorFromKey, method } = this.selectorCreator(this.options);
+    const selectorsToRemove = this.selectorCreator(this.options);
 
-    document.querySelector(selectorFromKey).removeEventListener(eventType, this[method].bind(this));
+    selectorsToRemove.map(selector => {
+      const { eventType, selectorFromKey, method } = selector;
+
+      return document.querySelector(selectorFromKey).removeEventListener(eventType, this[method].bind(this));
+    });
+  },
+
+  preventDublicates: function(container) {
+    if (container.innerHTML !== '') {
+      container.innerHTML = '';
+    }
   }
 };
 
 //============UserComponent
-const UserComponent = function(options) {
-  Component.call(this, options);
-  this.container = null;
+const UserComponent = function(options, url, container, template) {
+  Component.call(this, options, url, container, template);
 };
 
 UserComponent.prototype = Object.create(Component.prototype);
 UserComponent.prototype.constructor = UserComponent;
 
-const userComponent = new UserComponent(null);
+const userComponent = new UserComponent(null, usersUrl, userContainer, userTemplate);
 
-userComponent.fetchData('https://jsonplaceholder.typicode.com/users').then(response => {
-  const usersToRender = response.map(userTemplate).join('');
-
-  userComponent.render(usersToRender, userContainer);
-});
+userComponent.fetchData();
 
 //============PostsComponent
-const PostsComponent = function(options) {
-  Component.call(this, options);
-  this.container = null;
+const PostsComponent = function(options, container, url, template) {
+  Component.call(this, options, container, url, template);
 };
 
 PostsComponent.prototype = Object.create(Component.prototype);
 PostsComponent.prototype.constructor = PostsComponent;
 PostsComponent.prototype.getPosts = function(event) {
   if (event.target.nodeName !== 'BUTTON') return;
+  const baseUrl = this.url;
 
-  this.fetchData(`https://jsonplaceholder.typicode.com/posts?userId=${event.target.id}`).then(response => {
-    const postsToRender = response.map(postTemplate).join('');
-
-    this.render(postsToRender, postContainer);
-  });
+  this.url = `${baseUrl}${event.target.dataset.id}`;
+  this.fetchData();
+  this.url = baseUrl;
 };
 
 const optionsForPosts = {
@@ -151,29 +173,27 @@ const optionsForPosts = {
   }
 };
 
-const postsComponent = new PostsComponent(optionsForPosts);
+const postsComponent = new PostsComponent(optionsForPosts, urlPosts, postContainer, postTemplate);
 
 postsComponent.attachEventHandlers();
 
 // ============CommentComponent
-const CommentsComponent = function(options) {
-  Component.call(this, options);
-  this.container = null;
+
+const CommentsComponent = function(options, url, container, template) {
+  Component.call(this, options, url, container, template);
 };
 
 CommentsComponent.prototype = Object.create(Component.prototype);
 CommentsComponent.prototype.constructor = CommentsComponent;
 CommentsComponent.prototype.getComments = function(event) {
   if (event.target.nodeName !== 'BUTTON') return;
+  const baseUrl = this.url;
+  const id = event.target.dataset.id;
 
-  commentsComponent
-    .fetchData(`https://jsonplaceholder.typicode.com/comments?postId=${event.target.id}`)
-    .then(response => {
-      const commentContainer = document.querySelector(`.comment${response[0].postId}`);
-      const commentsToRender = response.map(commentTemplate).join('');
-
-      this.render(commentsToRender, commentContainer);
-    });
+  this.url = `${baseUrl}${id}`;
+  this.container = document.querySelector(`.comment${id}`);
+  this.fetchData();
+  this.url = baseUrl;
 };
 
 const optionsForComments = {
@@ -182,19 +202,24 @@ const optionsForComments = {
   }
 };
 
-const commentsComponent = new CommentsComponent(optionsForComments);
+const commentsComponent = new CommentsComponent(optionsForComments, urlComments, null, commentTemplate);
 
 commentsComponent.attachEventHandlers();
 
 // ============Destroy
-setTimeout(() => {
-  commentsComponent.destroy();
-}, 6000);
+// setTimeout(() => {
+//   commentsComponent.destroy();
+// }, 6000);
 
-setTimeout(() => {
-  postsComponent.destroy();
-}, 7000);
+// setTimeout(() => {
+//   postsComponent.destroy();
+// }, 7000);
 
-setTimeout(() => {
-  userComponent.destroy();
-}, 8000);
+// setTimeout(() => {
+//   userComponent.destroy();
+// }, 8000);
+
+// ===============
+// error if url wrong xxx
+//no dublicates
+// destroy
